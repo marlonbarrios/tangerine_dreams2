@@ -1,4 +1,4 @@
-# Tangerine Dreams
+# Tangerine Dreams (Lat version)
 
 An interactive MIDI experience that explores speculative Afro-futuristic visions through the dreams of wise tangerines from the future, looking back to the past.
 
