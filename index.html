@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tangerine Dreams - Interactive MIDI Experience</title>
+    <script src="https://cdn.jsdelivr.net/npm/webmidi@latest/dist/iife/webmidi.iife.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      
+      body {
+        margin: 0;
+        padding: 0;
+        background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+        color: white;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        overflow: hidden;
+        position: relative;
+      }
+      
+      /* Animated background stars */
+      body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: 
+          radial-gradient(2px 2px at 20% 30%, white, transparent),
+          radial-gradient(2px 2px at 60% 70%, white, transparent),
+          radial-gradient(1px 1px at 50% 50%, white, transparent),
+          radial-gradient(1px 1px at 80% 10%, white, transparent),
+          radial-gradient(2px 2px at 90% 40%, white, transparent),
+          radial-gradient(1px 1px at 33% 60%, white, transparent),
+          radial-gradient(1px 1px at 55% 80%, white, transparent);
+        background-size: 200% 200%;
+        animation: starMove 20s ease-in-out infinite;
+        opacity: 0.6;
+        z-index: 0;
+      }
+      
+      @keyframes starMove {
+        0%, 100% { transform: translate(0, 0); }
+        50% { transform: translate(-20px, -20px); }
+      }
+      
+      canvas {
+        display: block;
+        position: relative;
+        z-index: 1;
+      }
+      
+      /* Welcome Screen */
+      #welcomeScreen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, rgba(10, 10, 10, 0.95) 0%, rgba(26, 26, 46, 0.95) 50%, rgba(22, 33, 62, 0.95) 100%);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        transition: opacity 1s ease-out, visibility 1s ease-out;
+        text-align: center;
+        padding: 20px;
+      }
+      
+      #welcomeScreen.hidden {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+      
+      .welcome-content {
+        max-width: 800px;
+        animation: fadeInUp 1s ease-out;
+        text-align: center;
+      }
+      
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
+      h1 {
+        font-size: clamp(2.5rem, 5vw, 4rem);
+        font-weight: 700;
+        margin-bottom: 20px;
+        background: linear-gradient(135deg, #ffd700 0%, #ff6b6b 50%, #4ecdc4 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        text-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+        letter-spacing: 2px;
+        text-align: center;
+      }
+      
+      .subtitle {
+        font-size: clamp(1.2rem, 2.5vw, 1.8rem);
+        color: #e0e0e0;
+        margin-bottom: 30px;
+        font-weight: 300;
+        line-height: 1.6;
+        text-align: center;
+      }
+      
+      .description {
+        font-size: clamp(1rem, 1.5vw, 1.2rem);
+        color: #b0b0b0;
+        margin-bottom: 40px;
+        line-height: 1.8;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+        text-align: center;
+      }
+      
+      .instructions {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 30px;
+        backdrop-filter: blur(10px);
+      }
+      
+      .instructions h2 {
+        font-size: clamp(1.3rem, 2vw, 1.6rem);
+        margin-bottom: 15px;
+        color: #ffd700;
+        text-align: center;
+      }
+      
+      .instructions ul {
+        list-style: none;
+        text-align: center;
+        max-width: 500px;
+        margin: 0 auto;
+      }
+      
+      .instructions li {
+        padding: 10px 0;
+        padding-left: 0;
+        position: relative;
+        color: #d0d0d0;
+        font-size: clamp(0.9rem, 1.2vw, 1.1rem);
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .instructions li::before {
+        content: '✦';
+        margin-right: 10px;
+        color: #ffd700;
+        font-size: 1.2em;
+      }
+      
+      #startButton {
+        background: linear-gradient(135deg, #ff6b6b 0%, #4ecdc4 100%);
+        color: white;
+        border: none;
+        padding: 18px 50px;
+        font-size: clamp(1.1rem, 1.5vw, 1.3rem);
+        font-weight: 600;
+        border-radius: 50px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 10px 30px rgba(255, 107, 107, 0.3);
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        position: relative;
+        overflow: hidden;
+      }
+      
+      #startButton::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        transition: left 0.5s;
+      }
+      
+      #startButton:hover::before {
+        left: 100%;
+      }
+      
+      #startButton:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 15px 40px rgba(255, 107, 107, 0.5);
+      }
+      
+      #startButton:active {
+        transform: translateY(-1px);
+      }
+      
+      /* Info panel */
+      #info {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 100;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 10px;
+        border-radius: 5px;
+        font-size: 12px;
+        transition: opacity 0.5s ease-out;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        text-align: center;
+      }
+      
+      
+      /* Loading animation */
+      .loading-dots {
+        display: inline-block;
+        margin-left: 10px;
+      }
+      
+      .loading-dots span {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #ffd700;
+        margin: 0 3px;
+        animation: bounce 1.4s infinite ease-in-out both;
+      }
+      
+      .loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+      .loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+      
+      @keyframes bounce {
+        0%, 80%, 100% { transform: scale(0); }
+        40% { transform: scale(1); }
+      }
+    </style>
+  </head>
+  
+  <body>
+    <!-- Welcome Screen -->
+    <div id="welcomeScreen">
+      <div class="welcome-content">
+        <h1>Tangerine Dreams</h1>
+        <p class="description">
+          What do tangerines dream of? In this Afro-futuristic experience, wise tangerines from the future look back to the past, 
+          sharing vivid dreams of speculative futures. Touch the tangerines in the baskets and one of the 16 tangerines on the edge 
+          of the table at the same time to receive the dream. Keep touching to receive the whole dream. To get another dream, touch 
+          another tangerine outside the basket. You may take one of the tangerines to eat them later. And the dream will be part of you. 
+          Explore their dreams through sound, light, and wisdom.
+        </p>
+        
+        <div class="instructions" style="margin-top: 20px; margin-bottom: 20px;">
+          <p style="color: #ffd700; font-size: 0.9em; line-height: 1.6;">
+            🔊 <strong>Audio Note:</strong> Make sure your system volume is up and this tab is not muted.<br>
+            <strong>On macOS:</strong> Check System Settings > Sound > "System Voice" volume (this is separate from media volume).<br>
+            The tangerines will speak their dreams when you touch them. Type <code>testSpeech()</code> in console to test.
+          </p>
+        </div>
+        
+        <button id="startButton" onclick="startExperience()">Enter the Dreams</button>
+      </div>
+    </div>
+    
+    <div id="info">
+      <div id="status">Initializing WebMidi<span class="loading-dots"><span></span><span></span><span></span></span></div>
+      <div id="devices"></div>
+    </div>
+    
+    <script type="module">
+
+      // Enable WEBMIDI.js and trigger the onEnabled() function when ready
+      WebMidi
+        .enable()
+        .then(onEnabled)
+        .catch(err => {
+          document.getElementById('status').textContent = "MIDI Error: " + err.message;
+          alert("MIDI Error: " + err.message + "\n\nTo fix:\n1. Click the lock icon (🔒) in the address bar\n2. Set 'MIDI devices' to 'Allow'\n3. Refresh the page");
+          console.error("MIDI Error:", err);
+        });
+
+      // Function triggered when WEBMIDI.js is ready
+      function onEnabled() {
+        // Update status
+        const statusDiv = document.getElementById('status');
+        const devicesDiv = document.getElementById('devices');
+        
+        // Try to find "playtron" device, otherwise use first available
+        let mySynth = null;
+        if (WebMidi.inputs.length > 0) {
+          mySynth = WebMidi.getInputByName("playtron");
+          if (!mySynth) {
+            mySynth = WebMidi.inputs[0];
+          }
+          
+          if (statusDiv) {
+            statusDiv.innerHTML = `MIDI Connected ✓<br><small>Device: ${mySynth.name}</small>`;
+          }
+          
+          // Listen to 'note on' events on ANY channel
+          // Map MIDI notes 60-75 to 16 visual sections
+          mySynth.addListener("noteon", e => {
+            const midiNote = e.note.number;
+            console.log(`[NOTE ON] MIDI Note: ${midiNote} (${e.note.name}${e.note.octave})`);
+            
+            // Process notes 60-75 (maps to visual channels 1-16)
+            if (midiNote >= 60 && midiNote <= 75) {
+              handleNoteOn(e);
+            }
+          });
+          
+          // Listen to 'note off' events on ANY channel
+          mySynth.addListener("noteoff", e => {
+            const midiNote = e.note.number;
+            console.log(`[NOTE OFF] MIDI Note: ${midiNote}`);
+            
+            // Process notes 60-75
+            if (midiNote >= 60 && midiNote <= 75) {
+              handleNoteOff(e);
+            }
+          });
+          
+          // Dispatch event for MIDI ready
+          window.dispatchEvent(new Event('midiReady'));
+        } else {
+          if (statusDiv) {
+            statusDiv.innerHTML = 'No MIDI devices found';
+          }
+        }
+        
+        // Hide info panel after a short delay with fade
+        setTimeout(() => {
+          const infoDiv = document.getElementById('info');
+          if (infoDiv) {
+            infoDiv.style.opacity = '0';
+            setTimeout(() => {
+              infoDiv.style.display = 'none';
+            }, 500);
+          }
+        }, 3000);
+      }
+      
+    </script>
+    
+    <script>
+      // Function to start the experience
+      function startExperience() {
+        const welcomeScreen = document.getElementById('welcomeScreen');
+        welcomeScreen.classList.add('hidden');
+        
+        // Initialize speech synthesis after user interaction
+        if (typeof window.initializeSpeechSynthesis === 'function') {
+          window.initializeSpeechSynthesis();
+        } else {
+          console.warn('Speech synthesis initialization function not found');
+        }
+        
+        // Hide info panel after a delay
+        setTimeout(() => {
+          const infoDiv = document.getElementById('info');
+          if (infoDiv) {
+            infoDiv.style.opacity = '0';
+            setTimeout(() => {
+              infoDiv.style.display = 'none';
+            }, 500);
+          }
+        }, 2000);
+      }
+      
+      // Function to enable audio (required by browsers)
+      function enableAudio() {
+        if (typeof window.audioContext !== 'undefined' && window.audioContext) {
+          window.audioContext.resume().then(() => {
+            console.log('Audio context resumed');
+          });
+        }
+      }
+      
+      // Auto-hide welcome screen after MIDI is ready
+      let midiReady = false;
+      const originalOnEnabled = window.onEnabled;
+      
+      // Update status when MIDI is ready
+      window.addEventListener('midiReady', () => {
+        midiReady = true;
+        const statusDiv = document.getElementById('status');
+        if (statusDiv) {
+          statusDiv.innerHTML = 'MIDI Connected ✓';
+        }
+      });
+    </script>
+    
+    <script src="sketch.js"></script>
+  </body>
+
+</html>
